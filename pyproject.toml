@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "using mt for pid tuning"
+version = "0.1.0"
+description = "This repo present the experiment on using Metamorphic testing for finding/identifying optimal tuning parameters"
+authors = ["Aleja <alejandra.duque-torres@scch.at>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
