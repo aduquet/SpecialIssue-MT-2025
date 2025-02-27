@@ -1,5 +1,5 @@
-import pandas as pd
-import numpy as np
+import pandas as pd # type: ignore
+import numpy as np # type: ignore
 import click
 import json
 
@@ -113,6 +113,8 @@ def get_mt_metrics(df):
     return df
 
 def mr_rt_vs_pr(df):
+    
+    "If the RT is lower, should stay in the range"
 
     base_rt = df.at['tc100_def_0', 'RT']
     base_pr = df.at['tc100_def_0', 'PR']
@@ -122,7 +124,7 @@ def mr_rt_vs_pr(df):
     for index, row in df.iterrows():
         if index != 'tc100_def_0':
 
-            if base_rt > row['RT']:
+            if base_rt >= row['RT']:
                 
                 if base_pr <= row['PR'] <= 1.05:
                     df.at[index, 'mr_rt_vs_pr'] = 1
@@ -134,6 +136,8 @@ def mr_rt_vs_pr(df):
 
 
 def mr_eng_p(df):
+
+    "If Kp increase the related energy should increase o remains equal"
 
     base_kp = df.at['tc100_def_0', 'kp']
     base_eng_p = df.at['tc100_def_0', 'P-Eng']
@@ -154,6 +158,8 @@ def mr_eng_p(df):
         
 def mr_kp_rt(df):
 
+    "Increasing Kp should reduce the RT"
+
     base_kp = df.at['tc100_def_0', 'kp']
     base_rt = df.at['tc100_def_0', 'RT']
 
@@ -172,8 +178,24 @@ def mr_kp_rt(df):
 
     df.to_csv('out.csv')
 
+def mr_kpki(df):
 
+    base_kp = df.at['tc100_def_0', 'kp']
+    base_ki = df.at['tc100_def_0', 'ki']
+    base_rt = df.at['tc100_def_0', 'RT']
 
+    df['mr_kpki'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_kp > row['kp'] and base_ki > row['ki']:
+                
+                if base_rt >= row['RT']:
+                    df.at[index, 'mr_kp_rt'] = 1
+                
+                else:
+                    df.at[index, 'mr_kp_rt'] = 0
 
 @click.command()
 @click.argument('file_path', type=click.Path(exists=True))
