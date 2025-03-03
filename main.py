@@ -112,14 +112,14 @@ def get_mt_metrics(df):
 
     return df
 
-def mr_rt_vs_pr(df):
+def mr_rt_vs_pr_faster_than_base(df):
     
     "If the RT is lower, should stay in the range"
 
     base_rt = df.at['tc100_def_0', 'RT']
     base_pr = df.at['tc100_def_0', 'PR']
 
-    df['mr_rt_vs_pr'] = 'n/a'
+    df['mr_rt_vs_pr_f'] = 'n/a'
 
     for index, row in df.iterrows():
         if index != 'tc100_def_0':
@@ -127,20 +127,41 @@ def mr_rt_vs_pr(df):
             if base_rt >= row['RT']:
                 
                 if base_pr <= row['PR'] <= 1.05:
-                    df.at[index, 'mr_rt_vs_pr'] = 1
+                    df.at[index, 'mr_rt_vs_pr_f'] = 1
                 
                 else:
-                    df.at[index, 'mr_rt_vs_pr'] = 0
+                    df.at[index, 'mr_rt_vs_pr_f'] = 0
     
     return df
 
+def mr_rt_vs_pr_lower_than_base(df):
+    
+    "If the RT is lower, should stay in the range"
+
+    base_rt = df.at['tc100_def_0', 'RT']
+    base_pr = df.at['tc100_def_0', 'PR']
+
+    df['mr_rt_vs_pr_l'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_rt <= row['RT']:
+                
+                if base_pr <= row['PR'] <= 1.05:
+                    df.at[index, 'mr_rt_vs_pr_l'] = 1
+                
+                else:
+                    df.at[index, 'mr_rt_vs_pr_l'] = 0
+    
+    return df
 
 def mr_eng_p(df):
 
     "If Kp increase the related energy should increase o remains equal"
 
     base_kp = df.at['tc100_def_0', 'kp']
-    base_eng_p = df.at['tc100_def_0', 'P-Eng']
+    base_eng_p = df.at['tc100_def_0', 'P-Eng']/df.at['tc100_def_0', 'S-Eng']
 
     df['mr_eng_p'] = 'n/a'
 
@@ -175,8 +196,7 @@ def mr_kp_rt(df):
                 
                 else:
                     df.at[index, 'mr_kp_rt'] = 0
-
-    df.to_csv('out.csv')
+    return df
 
 def mr_kpki(df):
 
@@ -189,13 +209,104 @@ def mr_kpki(df):
     for index, row in df.iterrows():
         if index != 'tc100_def_0':
 
-            if base_kp > row['kp'] and base_ki > row['ki']:
+            if base_kp >= row['kp'] and base_ki >= row['ki']:
                 
                 if base_rt >= row['RT']:
                     df.at[index, 'mr_kp_rt'] = 1
                 
                 else:
                     df.at[index, 'mr_kp_rt'] = 0
+    return df
+
+def mr_kp_ess(df):
+
+    base_kp = df.at['tc100_def_0', 'kp']
+    base_ess_step = df.at['tc100_def_0', 'ess_step']
+
+    df['mr_kp_ess'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_kp < row['kp'] :
+                
+                if base_ess_step <= row['ess_step']:
+                    df.at[index, 'mr_kp_ess'] = 1
+                
+                else:
+                    df.at[index, 'mr_kp_ess'] = 0    
+    return df
+
+def mr_tn_ess(df):
+
+    base_Tn = df.at['tc100_def_0', 'Tn']
+    base_ess_step = df.at['tc100_def_0', 'ess_step']
+
+    df['mr_Tn_ess'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_Tn < row['Tn'] :
+                
+                if base_ess_step <= row['ess_step']:
+                    df.at[index, 'mr_kp_ess'] = 1
+                
+                else:
+                    df.at[index, 'mr_kp_ess'] = 0    
+    return df
+
+def mr_kd_ki(df):
+
+    base_kd = df.at['tc100_def_0', 'kd']
+    base_ki = df.at['tc100_def_0', 'ki']
+
+    base_eng =  base_eng_p = df.at['tc100_def_0', 'P-Eng']/df.at['tc100_def_0', 'S-Eng']
+
+    df['mr_kd_ki'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_kd < row['kd'] and base_ki < row['ki']:
+                
+                if base_eng <= row['P-Eng']/row["S-Eng"]:
+                    df.at[index, 'mr_kd_ki'] = 1
+                
+                else:
+                    df.at[index, 'mr_kd_ki'] = 0    
+    return df
+
+def mr_kp_kd(df):
+
+    base_kd = df.at['tc100_def_0', 'kd']
+    base_kp = df.at['tc100_def_0', 'kp']
+    base_rt = df.at['tc100_def_0', 'RT']
+
+    df['mr_kp_kd'] = 'n/a'
+
+    for index, row in df.iterrows():
+        if index != 'tc100_def_0':
+
+            if base_kp < row['kp'] and base_kd > row['kd']:
+                
+                if base_rt >= row['RT']:
+                    df.at[index, 'mr_kp_kd'] = 1
+                
+                else:
+                    df.at[index, 'mr_kp_kd'] = 0    
+    return df
+
+def analysis(df):
+    # List of target columns
+    target_columns = ['mr_rt_vs_pr_f','mr_rt_vs_pr_l','mr_eng_p','mr_kp_rt','mr_kpki','mr_kp_ess','mr_Tn_ess','mr_kd_ki','mr_kp_kd']
+
+    # Count occurrences row-wise
+    df['total_1'] = df[target_columns].apply(lambda row: (row == 1).sum(), axis=1)
+    df['total_0'] = df[target_columns].apply(lambda row: (row == 0).sum(), axis=1)
+    df['total_na'] = df[target_columns].apply(lambda row: (row == 'n/a').sum(), axis=1)
+
+    return df
 
 @click.command()
 @click.argument('file_path', type=click.Path(exists=True))
@@ -226,13 +337,32 @@ def init(file_path):
                           "speed",
                           "pressureT",
                           "speedT"])
-    df_data = mr_rt_vs_pr(df_data)
-
-    df_data = mr_eng_p(df_data)
-    mr_kp_rt(df_data)
     
+    df_data = mr_rt_vs_pr_faster_than_base(df_data)
+    df_data = mr_rt_vs_pr_lower_than_base(df_data)
+    df_data = mr_eng_p(df_data)
+    df_data = mr_kp_rt(df_data)
+    df_data = mr_kpki(df_data)
+    df_data = mr_kp_ess(df_data)
+    df_data = mr_tn_ess(df_data)
+    df_data = mr_kd_ki(df_data)
+    df_data = mr_kp_kd(df_data)
+    df_data = analysis(df_data)
+    df=  df_data.sort_values(by='total_1', ascending=False)
+    df.to_csv('out_sorting_by_total.csv')
+
+    # Identify unique combinations of the specified columns
+    unique_combinations = df[['mr_rt_vs_pr_f','mr_rt_vs_pr_l','mr_eng_p','mr_kp_rt','mr_kpki','mr_kp_ess','mr_Tn_ess','mr_kd_ki','mr_kp_kd']].drop_duplicates()
+
+    # Assign a unique group number to each combination
+    unique_combinations = unique_combinations.reset_index(drop=True)
+    unique_combinations['group'] = unique_combinations.index + 1
+
+    # Merge back with the original DataFrame to assign group numbers
+    df = df.merge(unique_combinations, on=['mr_rt_vs_pr_f','mr_rt_vs_pr_l','mr_eng_p','mr_kp_rt','mr_kpki','mr_kp_ess','mr_Tn_ess','mr_kd_ki','mr_kp_kd'], how='left')
     # based_metrics = get_reference_metric(df_data)
     # get_mt_metrics(df_data)
+    df.to_csv('grupe.csv')
 
 if __name__ == "__main__":
     init()
