@@ -52,10 +52,7 @@ def get_kp(df):
             df.at[index, 'kp'] = float(round(kp,3))
 
         except:
-            print("***********************************************************")
-            print("check this value, can't not be zero", row['Kr'])
-            print("***********************************************************")
-
+            e=9
     return df
 
 def get_mt_metrics(df):
