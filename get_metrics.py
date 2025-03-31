@@ -59,6 +59,12 @@ def getting_metrics(df):
             pressureT
         )
 
+        # Error signal
+        error   = pressureT - pressureR
+        r_ess_step = abs(pressureT[-1] - pressureR[-1])
+        r_IAE = np.trapezoid(np.abs(error), time)
+        r_ITAE = np.trapezoid(time * np.abs(error), time)
+
         try:
             # Compute natural frequency (approximation)
             omega_n = np.sqrt(row['Kr'] / (row['Tn'] * row['Tv']))
@@ -87,6 +93,10 @@ def getting_metrics(df):
             'ess_step': ess_step,
             'IAE': IAE,
             'ITAE': ITAE,
+            'R_ess_step': r_ess_step,
+            'R_IAE': r_IAE,
+            'R_ITAE': r_ITAE,
+            'ess_step': ess_step,
             "Kr": row["Kr"],
             "Tn": row["Tn"],
             "Tv": row["Tv"],

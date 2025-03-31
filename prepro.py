@@ -1,5 +1,7 @@
 from get_metrics import getting_metrics
-from mr_kp_ki_kd import mrs
+# from mr_kp_ki_kd import mrs
+from final_mrs import mrs_pid
+from aux_plot import do_plot
 import pandas as pd
 import numpy as np
 import pathlib
@@ -23,13 +25,13 @@ def get_pid_metric(kr, Tn, Tv):
         e=0
     return kp, ki, kd
 
-# def compare(val, ref):
-#     if val > ref:
-#         return 'h'
-#     elif val < ref:
-#         return 'l'
-#     else:
-#         return 'e'
+def compare(val, ref):
+    if val > ref:
+        return 'h'
+    elif val < ref:
+        return 'l'
+    else:
+        return 'e'
     
 with open('prueba.json', 'r') as file:
     data = json.load(file)
@@ -50,125 +52,138 @@ for index, row in df_data.iterrows():
     df_data.at[index,'kd'] = kd
 
 df_data = getting_metrics(df_data)
+tcstr = 'tc106'
 
-df_data =  df_data[df_data['tc'] == 'tc100']
+# df_data =  df_data[df_data['tc'] == tcstr]
 
-# final_data = df_data[[ 'tc', 'test #', 'kp', 'kd', 'ki', 
-#                       'ess_step', 'IAE', 'ITAE','Kr', 'Tn', 'Tv', 
-#                       'PR', 'RT', 'P-Eng','S-Eng', 'Eng-rel','osc_p', 'osc_s']]
 
-# ref_kp = final_data.loc[0, 'kp']
-# ref_ki = final_data.loc[0, 'ki']
-# ref_kd = final_data.loc[0, 'kd']
+final_data = df_data[[ 'tc', 'test #', 'kp', 'kd', 'ki', 
+                      'ess_step', 'IAE', 'ITAE', 'R_ess_step', 'R_IAE', 'R_ITAE','Kr', 'Tn', 'Tv', 
+                      'PR', 'RT', 'P-Eng','S-Eng', 'Eng-rel','osc_p', 'osc_s']]
 
-# for index, row in final_data.iterrows():
-#     code = (
-#         compare(row['kp'], ref_kp) +
-#         compare(row['ki'], ref_ki) +
-#         compare(row['kd'], ref_kd)
-#     )
-#     final_data.at[index,'parameter_code'] = code
+ref_kp = final_data.loc[0, 'kp']
+ref_ki = final_data.loc[0, 'ki']
+ref_kd = final_data.loc[0, 'kd']
 
-# final_data.to_csv('final_data.csv')
+for index, row in final_data.iterrows():
+    code = (
+        compare(row['kp'], ref_kp) +
+        compare(row['ki'], ref_ki) +
+        compare(row['kd'], ref_kd)
+    )
+    final_data.at[index,'parameter_code'] = code
+
+final_data.to_csv('final_data.csv')
 
 final_data = pd.read_csv('final_data.csv')
-tc100 =  final_data[final_data['tc'] == 'tc100']
+tc100 =  final_data[final_data['tc'] == tcstr]
+
 
 ref_rt = final_data.loc[0, 'RT']
 # ref_eng = final_data.loc[0, 'Eng-rel']
-ref_eng = final_data.loc[0,'S-Eng']
+ref_eng_s = final_data.loc[0,'S-Eng']
 ref_osc = final_data.loc[0, 'osc_p']
-ref_IAE = final_data.loc[0, 'IAE']
+ref_IAE = final_data.loc[0, 'R_IAE']
+ref_ITAE = final_data.loc[0, 'R_ITAE']
+
+ref_ess = final_data.loc[0, 'R_ess_step']
+ref_eng_rel= final_data.loc[0,'P-Eng'] / final_data.loc[0,'S-Eng']
 
 for index, row in tc100.iterrows():
-    tc100.at[index,'eng-diff'] =ref_eng - row['S-Eng']
+    tc100.at[index,'eng-diff'] =ref_eng_s - row['S-Eng']
 
-ref_eng_diff = tc100.loc[0, 'eng-diff']
+ref_eng_diff = 0
+
+parameter_count_list = list(set(final_data['parameter_code']))
+
+for index, row in tc100.iterrows():
+    eng_rel= row['P-Eng'] / row['S-Eng']
+    if row['parameter_code'] == 'lll':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_EngS'] = mrs_pid.mr_lll_two(ref_eng_s, row['S-Eng'])
+        tc100.at[index,'mr_osc'] = mrs_pid.mr_osc(row['osc_p'], row['osc_s'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_l(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+
+    if row['parameter_code'] == 'hlh':
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_g(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_g(ref_eng_rel, eng_rel)
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+
+    if row['parameter_code'] == 'hll':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_g(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_g(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_g(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_g(ref_eng_rel, eng_rel)
+
+    if row['parameter_code'] == 'lhl' or row['parameter_code'] == 'ehl' :
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_l(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_l(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_g(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_g(ref_eng_rel, eng_rel)
+
+    if row['parameter_code'] == 'ell' or row['parameter_code'] == 'llh' or row['parameter_code'] == 'eel' or row['parameter_code'] == 'elh':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_g(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_g(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_g(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_l(ref_eng_rel, eng_rel)
+
+    if row['parameter_code'] == 'hhl':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_l(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_g(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_g(ref_eng_rel, eng_rel)
+
+    if row['parameter_code'] == 'hhh':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_l(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_l(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_l(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_l(ref_eng_rel, eng_rel)
+
+    if row['parameter_code'] == 'ehh' or row['parameter_code'] == 'heh':
+        tc100.at[index,'mr_RT'] = mrs_pid.mr_rt_f(ref_rt, row['RT'])
+        tc100.at[index,'mr_PR'] = mrs_pid.mr_PR(row['PR'])
+        tc100.at[index,'mr_ess_g'] = mrs_pid.mr_ess_step_l(ref_ess, row['R_ess_step'])
+        tc100.at[index,'mr_IAE'] = mrs_pid.mr_IAE_l(ref_IAE, row['R_IAE'])
+        tc100.at[index,'mr_ITAE'] = mrs_pid.mr_ITAE_l(ref_ITAE, row['R_ITAE'])
+        tc100.at[index,'mr_Eng_p_s'] = mrs_pid.mr_eng_p_s_g(ref_eng_rel, eng_rel)
+
 
 for index, row in tc100.iterrows():
     if row['parameter_code'] == 'lll':
-        tc100.at[index,'mr_lll_RT'] = mrs.mr_lll_one(ref_rt, row['RT'])
-        tc100.at[index,'mr_lll_EngS'] = mrs.mr_lll_two(ref_eng, row['S-Eng'])
-        tc100.at[index,'mr_lll_osc'] = mrs.mr_lll_tree(row['osc_p'], row['osc_s'])
-        tc100.at[index,'mr_IAE'] = mrs.mr_AIE(ref_IAE, row['IAE'])
-        tc100.at[index,'mr_PR'] = mrs.mr_PR(row['PR'])
+        tc100.at[index,'total_one'] = row['mr_RT'] + row['mr_EngS']+row['mr_osc'] + row['mr_IAE'] +row['mr_PR'] 
+    if row['parameter_code'] == 'hlh':
+        tc100.at[index,'total_one'] = row['mr_ess_g'] + row['mr_PR']+row['mr_Eng_p_s'] + row['mr_RT']  
+    if row['parameter_code'] == 'hll' or row['parameter_code'] == 'ell' or row['parameter_code'] == 'llh' or row['parameter_code'] == 'hhh'or row['parameter_code'] == 'eel' or row['parameter_code'] == 'elh':
+        tc100.at[index,'total_one'] = row['mr_RT'] + row['mr_PR']+row['mr_ess_g'] + row['mr_IAE'] +row['mr_ITAE'] +row['mr_Eng_p_s']
+    if row['parameter_code'] == 'hhl':
+        tc100.at[index,'total_one'] = row['mr_ess_g'] + row['mr_PR']+row['mr_Eng_p_s'] + row['mr_RT']  + row['mr_ITAE'] 
 
-for index, row in tc100.iterrows():
-    if row['parameter_code'] == 'lll':
-        tc100.at[index,'total_one'] = row['mr_lll_RT'] + row['mr_IAE']+row['mr_lll_EngS'] + row['mr_lll_osc'] +row['mr_PR'] 
-# for index, row in final_data.iterrows():
-#     tc_id = get_test_case_id(row["test_id"])
-#     id = int(row["test_id"].split("_")[-1])
-#     df_data.at[index, "tc"] = tc_id
-#     df_data.at[index, "id"] = id
-#     kp, ki, kd = get_pid_metric(row['Kr'], row['Tn'], row['Tv'])
-#     df_data.at[index,'kp'] = kp
-#     df_data.at[index,'ki'] = ki
-#     df_data.at[index,'kd'] = kd
+    if row['parameter_code'] == 'lhl' or row['parameter_code'] == 'ehl' or row['parameter_code'] == 'heh' :
+        tc100.at[index,'total_one'] = row['mr_ess_g'] + row['mr_PR']+row['mr_Eng_p_s'] + row['mr_RT']  + row['mr_ITAE'] + row['mr_IAE'] 
 
-tc100_pr = tc100[tc100['mr_PR'] == 1]
 
-tc100_list = list(set(tc100_pr['total_one']))
-print(tc100_list)
-print(tc100_pr['total_one'].value_counts())
+para_list = list(set(tc100['parameter_code']))
+print(para_list)
+for para in para_list:
 
-for i in tc100_list:
+    tc100_pr = tc100[tc100['parameter_code'] == para]
 
-    folder_path = str(pathlib.Path().absolute()) + "\\" + "lll-MRs-" + str(i)
+    tc100_pr = tc100_pr[tc100_pr['mr_PR'] == 1]
 
-    if not os.path.exists(folder_path):
-        os.mkdir( "lll-MRs-" + str(i))
+    tc100_list = list(set(tc100_pr['total_one']))
 
-    aux = tc100_pr[tc100_pr['total_one'] == i]
+    do_plot(tc100_list, tc100_pr, df_data, 'prueba_106_' + para )
 
-    # Iterate through rows in the filtered dataframe
-    for index, row in aux.iterrows():
-        # Get test ID
-        test_id = row['test #']
-        
-        # Safely filter df_data for current test ID
-        df_data_aux = df_data[df_data['test #'] == test_id]
-        time = df_data_aux.at[index,'time']
 
-        # Ensure the data is converted to float correctly
-        try:
-            time = df_data_aux.at[index,'time']
-            pressureT = df_data_aux.at[index,'pressureT']
-            speedT = df_data_aux.at[index,'speedT']
-            pressureR = df_data_aux.at[index,'pressure']
-            speedR = df_data_aux.at[index,'speed']
-            rising_time = df_data_aux.at[index, 'RT']
-            
-            # Create plot
-            fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-            fig.suptitle(f"Response Curves for Test ID: {test_id}, Total MRs: {i}", fontsize=14)
-            
-            # Pressure Plot
-            axs[0].plot(time, pressureT, 'r-', label="Speed Target")
-            axs[0].plot(time, pressureR, 'b-', label=f"Speed {test_id}")
-            axs[0].axvline(rising_time, color='purple', linestyle='--', linewidth=1, alpha=0.6, label="Rising Time")
-            axs[0].set_ylabel("Pressure")
-            axs[0].legend()
-            axs[0].grid(True)
-            
-            # Speed Plot
-            axs[1].plot(time, speedT, 'r-', label="Speed Target")
-            axs[1].plot(time, speedR, 'b-', label=f"Speed {test_id}")
-            axs[1].axvline(rising_time, color='purple', linestyle='--', linewidth=1, alpha=0.6, label="Rising Time")
-            axs[1].set_ylabel("Speed")
-            axs[1].set_xlabel("Time")
-            axs[1].legend()
-            axs[1].grid(True)
-            
-            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-            plt.savefig(os.path.join(folder_path, f'{test_id}_MR{i}.png'), dpi=300)
-            plt.close(fig)
-            # plt.show()
-        
-        except Exception as e:
-            print(f"Error processing test ID {test_id}: {e}")
-            # Optional: continue to next iteration if there's an error
-            continue
-
-tc100.to_csv('tc1002.csv')
-# print(final_data)
+tc100.to_csv('prueba_' + tcstr + '.csv')

@@ -32,7 +32,6 @@ def get_reference_metric(df, ref):
         'kp' : kp,
         'ki' : ki,
         'kd' : kd,
-        'ess_step': ess_step,
         'IAE': IAE,
         'ITAE': ITAE,
     }
