@@ -59,7 +59,7 @@ def do_plot(tc_list, tc_pr, df_data, parameter_code ):
                 axs[1].grid(True)
                 
                 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                plt.savefig(os.path.join(folder_path, f'{test_id}_MR{i}.png'), dpi=300)
+                plt.savefig(os.path.join(folder_path, f'{test_id}_MR{i}.pdf'), dpi=300)
                 plt.close(fig)
                 # plt.show()
             

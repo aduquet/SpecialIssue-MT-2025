@@ -52,7 +52,7 @@ for index, row in df_data.iterrows():
     df_data.at[index,'kd'] = kd
 
 df_data = getting_metrics(df_data)
-tcstr = 'tc106'
+tcstr = 'tc100'
 
 # df_data =  df_data[df_data['tc'] == tcstr]
 
@@ -174,7 +174,7 @@ for index, row in tc100.iterrows():
 
 
 para_list = list(set(tc100['parameter_code']))
-print(para_list)
+print(tc100['parameter_code'].value_counts())
 for para in para_list:
 
     tc100_pr = tc100[tc100['parameter_code'] == para]
@@ -183,7 +183,7 @@ for para in para_list:
 
     tc100_list = list(set(tc100_pr['total_one']))
 
-    do_plot(tc100_list, tc100_pr, df_data, 'prueba_106_' + para )
+    do_plot(tc100_list, tc100_pr, df_data, 'PDF_' +tcstr+'_' + para )
 
 
-tc100.to_csv('prueba_' + tcstr + '.csv')
+tc100.to_csv('pdf_prueba_' + tcstr + '.csv')
